@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  web:
+    image: nginx
+    volumes:
+      - ./_ci/conf/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - .:/var/www/html
+    ports:
+      - 80:80
+    restart: always
+    depends_on:
+      - php
+  php:
+    build: _ci/build/coding-challenge
+    restart: always
+    volumes:
+      - ./_ci/conf/php/php.ini:/usr/local/etc/php/conf.d/php.ini
+      - ./_ci/conf/php/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+      - .:/var/www/html
+    #todo: ./public/bundles
+    depends_on:
+      - database
+  composer:
+    image: composer
+    volumes:
+      - .:/app
+    command: install
+  ###> doctrine/doctrine-bundle ###
+  database:
+    image: postgres:${POSTGRES_VERSION:-14.5}-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+      # You should definitely change the password in production
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app_sword}
+      POSTGRES_USER: ${POSTGRES_USER:-app_user}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./_ci/conf/postgres/:/docker-entrypoint-initdb.d/
+      - ./_ci/db-data:/var/lib/postgresql/data:rw
+      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
+      # - ./docker/db/data:/var/lib/postgresql/data:rw
+###< doctrine/doctrine-bundle ###
+
